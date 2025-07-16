@@ -14,11 +14,32 @@ from typing import Dict, Any, List
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mcp.neonpanel_client import neonpanel_client
+try:
+    from mcp.neonpanel_client import neonpanel_client
+    CLIENT_AVAILABLE = True
+except Exception as e:
+    st.error(f"NeonPanel client unavailable: {e}")
+    CLIENT_AVAILABLE = False
+    neonpanel_client = None
 
 # Page configuration
 st.title("🔧 NeonPanel Dashboard")
 st.markdown("Monitor and manage your NeonPanel infrastructure")
+
+# Demo mode indicator
+if CLIENT_AVAILABLE and neonpanel_client and neonpanel_client.demo_mode:
+    st.info("🚀 **Demo Mode**: Displaying sample NeonPanel data for demonstration")
+
+# Check if client is available
+if not CLIENT_AVAILABLE:
+    st.error("NeonPanel client is not available. Please check the installation.")
+    st.markdown("""
+    **To fix this issue:**
+    1. Ensure NeonPanel MCP client is properly configured
+    2. Add `NEONPANEL_API_KEY` environment variable
+    3. Check network connectivity
+    """)
+    st.stop()
 
 # Sidebar configuration
 with st.sidebar:
