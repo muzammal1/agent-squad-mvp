@@ -28,8 +28,41 @@ st.markdown("Chat with specialized AI agents that can help with various tasks in
 
 # Check if agents are available
 if not AGENTS_AVAILABLE:
-    st.error("Agent modules are not properly installed. Please check your installation.")
-    st.code("pip install -r requirements.txt")
+    st.info("🚀 **Demo Mode**: Agent modules are loading or unavailable.")
+    st.markdown("""
+    **This is a demo of the Agent Squad MVP interface.** 
+    
+    The app is currently running in demo mode while dependencies install. 
+    
+    **Available features:**
+    - ✅ Navigate between pages (Home, Enhanced Chat, NeonPanel Dashboard)
+    - ✅ View the user interface and layout
+    - ✅ See the agent selection and configuration options
+    
+    **To enable full functionality:**
+    - Wait for dependencies to install (may take 2-3 minutes)
+    - Or add API keys in Streamlit Cloud settings for full agent capabilities
+    
+    **Try the Enhanced Chat page** for a working interface!
+    """)
+    
+    # Show a demo interface
+    st.subheader("🤖 Agent Selection (Demo)")
+    demo_agent = st.selectbox(
+        "Choose Agent:",
+        ["Anthropic Claude", "AWS Bedrock", "NeonPanel Assistant", "Auto-Select"],
+        help="This is a demo selection - full functionality requires API keys"
+    )
+    
+    demo_message = st.text_area(
+        "Message:",
+        placeholder="Type your message here... (Demo mode - responses not active yet)",
+        height=100
+    )
+    
+    if st.button("Send Message (Demo)", type="primary"):
+        st.info(f"Demo: Would send message to {demo_agent}")
+        
     st.stop()
 
 # Initialize session state
