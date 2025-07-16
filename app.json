@@ -1,0 +1,30 @@
+{
+  "name": "agent-squad-mvp",
+  "description": "Multi-Agent AI Assistant with NeonPanel Integration",
+  "repository": "https://github.com/YOUR_USERNAME/agent-squad-mvp",
+  "logo": "https://streamlit.io/images/brand/streamlit-logo-secondary-colormark-darktext.png",
+  "keywords": ["streamlit", "ai", "agents", "chat", "neonpanel"],
+  "env": {
+    "ANTHROPIC_API_KEY": {
+      "description": "Anthropic API key for Claude agent",
+      "required": false
+    },
+    "AWS_ACCESS_KEY_ID": {
+      "description": "AWS Access Key for Bedrock agent",
+      "required": false
+    },
+    "AWS_SECRET_ACCESS_KEY": {
+      "description": "AWS Secret Key for Bedrock agent",
+      "required": false
+    },
+    "NEONPANEL_API_URL": {
+      "description": "NeonPanel API URL for dashboard integration",
+      "required": false
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ]
+}

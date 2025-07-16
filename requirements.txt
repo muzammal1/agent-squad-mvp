@@ -1,0 +1,26 @@
+# Core dependencies for Agent Squad MVP
+streamlit>=1.28.0
+duckduckgo-search
+python-dotenv
+boto3
+requests>=2.31.0
+pydantic>=2.0.0
+httpx>=0.24.0
+
+# Agent Squad framework (try pip install manually if needed)
+# agent-squad[aws]
+# agent-squad[anthropic]
+
+# Web UI and Chat Interface
+chainlit>=1.0.0
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+
+# Additional utilities
+streamlit-chat
+# streamlit-elements  # May have compatibility issues
+
+# Development and testing
+pytest>=7.0.0
+black>=23.0.0
+flake8>=6.0.0
