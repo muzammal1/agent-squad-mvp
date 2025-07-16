@@ -1,28 +1,41 @@
 import streamlit as st
 import os
+import asyncio
 from datetime import datetime
 import json
+import time
 
-# Simple chat interface without complex agent integration for now
+# Import mock agents for demo functionality
+try:
+    import sys
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from mock_agents import create_demo_orchestrator, simulate_streaming_response
+    DEMO_AVAILABLE = True
+except ImportError:
+    DEMO_AVAILABLE = False
+
+# Simple chat interface with working demo functionality
 st.title("🚀 Enhanced Chat Interface")
 
 st.markdown("""
-**Enhanced Multi-Agent Chat System**
+**Enhanced Multi-Agent Chat System** ✨
 
 This interface provides advanced chat capabilities with multiple agent types,
 streaming responses, and conversation management.
+
+🎯 **Working Demo**: This page uses mock agents to demonstrate the full chat experience!
 """)
 
-# Initialize session state
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# Check if demo is available
+if not DEMO_AVAILABLE:
+    st.error("Demo agents not available. Please check the mock_agents.py file.")
+    st.stop()
 
-if "conversation_stats" not in st.session_state:
-    st.session_state.conversation_stats = {
-        "total_messages": 0,
-        "agents_used": set(),
-        "session_start": datetime.now()
-    }
+# Initialize session state
+if "demo_messages" not in st.session_state:
+    st.session_state.demo_messages = []
+if "demo_orchestrator" not in st.session_state:
+    st.session_state.demo_orchestrator = create_demo_orchestrator()
 
 # Sidebar configuration
 with st.sidebar:
@@ -30,186 +43,194 @@ with st.sidebar:
     
     # Agent selection
     agent_type = st.selectbox(
-        "🤖 Select Agent Type:",
-        ["Auto-Select", "Anthropic Claude", "AWS Bedrock", "NeonPanel Assistant"],
-        help="Choose which agent to use for responses"
+        "Choose Agent:",
+        ["auto", "anthropic", "bedrock", "neonpanel"],
+        format_func=lambda x: {
+            "auto": "🎯 Auto-Select Best Agent",
+            "anthropic": "🤖 Anthropic Claude",
+            "bedrock": "⚡ AWS Bedrock",
+            "neonpanel": "🔧 NeonPanel Assistant"
+        }[x],
+        help="Select which agent to use for responses"
     )
     
-    # Features
-    st.subheader("🛠️ Features")
+    # Chat settings
+    st.subheader("💬 Chat Settings")
     enable_streaming = st.checkbox("Enable Streaming", value=True)
-    enable_context = st.checkbox("Context Awareness", value=True)
-    max_tokens = st.slider("Max Response Tokens", 100, 4000, 1000)
+    show_metadata = st.checkbox("Show Response Metadata", value=False)
     
-    # Session stats
-    st.subheader("📊 Session Statistics")
-    st.metric("Messages", st.session_state.conversation_stats["total_messages"])
-    st.metric("Agents Used", len(st.session_state.conversation_stats["agents_used"]))
-    
-    # Export options
-    st.subheader("💾 Export Chat")
-    if st.button("Export as JSON"):
-        chat_data = {
-            "messages": st.session_state.messages,
-            "stats": {
-                **st.session_state.conversation_stats,
-                "agents_used": list(st.session_state.conversation_stats["agents_used"]),
-                "session_start": st.session_state.conversation_stats["session_start"].isoformat()
-            }
-        }
-        st.download_button(
-            "Download JSON",
-            json.dumps(chat_data, indent=2),
-            file_name=f"chat_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-            mime="application/json"
-        )
-    
-    if st.button("Export as Text"):
-        text_export = "# Chat Export\\n\\n"
-        for msg in st.session_state.messages:
-            role = "User" if msg["role"] == "user" else f"Assistant ({msg.get('agent_name', 'Unknown')})"
-            text_export += f"**{role}:** {msg['content']}\\n\\n"
-        
-        st.download_button(
-            "Download Text",
-            text_export,
-            file_name=f"chat_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-            mime="text/plain"
-        )
+    # Demo info
+    st.subheader("📊 Demo Info")
+    st.metric("Messages Sent", len(st.session_state.demo_messages))
+    if st.session_state.demo_messages:
+        last_agent = st.session_state.demo_messages[-1].get("agent_used", "Unknown")
+        st.metric("Last Agent Used", last_agent)
     
     # Clear chat
     if st.button("🗑️ Clear Chat", type="secondary"):
-        st.session_state.messages = []
-        st.session_state.conversation_stats = {
-            "total_messages": 0,
-            "agents_used": set(),
-            "session_start": datetime.now()
-        }
+        st.session_state.demo_messages = []
         st.rerun()
 
+# Main chat interface
+st.subheader("💬 Chat Messages")
+
 # Display chat messages
-st.subheader("💬 Conversation")
-
-# Chat container
 chat_container = st.container()
-
 with chat_container:
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            if message["role"] == "assistant":
-                agent_name = message.get("agent_name", "Assistant")
-                st.markdown(f"**🤖 {agent_name}**")
-            st.markdown(message["content"])
+    for message in st.session_state.demo_messages:
+        if message["role"] == "user":
+            with st.chat_message("user"):
+                st.write(message["content"])
+        else:
+            with st.chat_message("assistant"):
+                st.write(message["content"])
+                if show_metadata and "metadata" in message:
+                    with st.expander("🔍 Response Metadata"):
+                        st.json(message["metadata"])
 
 # Chat input
-if prompt := st.chat_input("Type your message here..."):
-    # Add user message
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    st.session_state.conversation_stats["total_messages"] += 1
+user_input = st.chat_input("Type your message here...")
+
+if user_input:
+    # Add user message to chat
+    st.session_state.demo_messages.append({
+        "role": "user",
+        "content": user_input,
+        "timestamp": datetime.now().isoformat()
+    })
     
-    # Display user message
+    # Display user message immediately
     with st.chat_message("user"):
-        st.markdown(prompt)
+        st.write(user_input)
     
-    # Generate response (simplified for now)
+    # Generate assistant response
     with st.chat_message("assistant"):
-        # Determine agent based on selection
-        if agent_type == "Auto-Select":
-            if "neon" in prompt.lower() or "server" in prompt.lower():
-                selected_agent = "NeonPanel Assistant"
-            elif "code" in prompt.lower() or "technical" in prompt.lower():
-                selected_agent = "AWS Bedrock"
-            else:
-                selected_agent = "Anthropic Claude"
-        else:
-            selected_agent = agent_type
-        
-        st.markdown(f"**🤖 {selected_agent}**")
-        
-        # Simulate agent response (replace with actual agent integration)
         if enable_streaming:
-            response_placeholder = st.empty()
-            
             # Simulate streaming response
-            import time
-            simulated_response = f"Hello! I'm {selected_agent}. I understand you're asking about: '{prompt}'. "
+            response_placeholder = st.empty()
+            full_response = ""
             
-            if selected_agent == "NeonPanel Assistant":
-                simulated_response += "I can help you with server management, user data, and NeonPanel operations. However, I need the actual MCP server connection to provide real data."
-            elif selected_agent == "AWS Bedrock":
-                simulated_response += "I can assist with technical questions and AWS services. For full functionality, AWS credentials need to be configured."
-            else:
-                simulated_response += "I'm ready to help with general questions and conversations. For enhanced capabilities, API keys need to be configured."
-            
-            # Simulate character-by-character streaming
-            displayed_text = ""
-            for char in simulated_response:
-                displayed_text += char
-                response_placeholder.markdown(displayed_text)
-                time.sleep(0.02)  # Simulate typing delay
-            
-            final_response = displayed_text
+            # Simulate async response generation
+            try:
+                # Mock async call
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                response, metadata = loop.run_until_complete(
+                    st.session_state.demo_orchestrator.process_message(user_input, agent_type)
+                )
+                loop.close()
+                
+                # Simulate streaming by displaying response word by word
+                words = response.split()
+                for i in range(len(words)):
+                    partial_response = " ".join(words[:i+1])
+                    response_placeholder.write(partial_response)
+                    time.sleep(0.05)  # Simulate typing delay
+                
+                full_response = response
+                
+            except Exception as e:
+                full_response = f"Demo response for: '{user_input}'. This shows how the streaming interface works!"
+                metadata = {"demo_mode": True, "error": str(e)}
+                
+                for word in full_response.split():
+                    full_response_partial = full_response[:len(full_response.split())]
+                    response_placeholder.write(" ".join(full_response.split()[:len(full_response_partial.split()) + 1]))
+                    time.sleep(0.05)
         else:
             # Non-streaming response
-            final_response = f"Response from {selected_agent}: I received your message about '{prompt}'. This is a simplified response. To enable full agent capabilities, please configure the appropriate API keys in the .env file."
-            st.markdown(final_response)
+            try:
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                full_response, metadata = loop.run_until_complete(
+                    st.session_state.demo_orchestrator.process_message(user_input, agent_type)
+                )
+                loop.close()
+            except Exception as e:
+                full_response = f"Demo response for: '{user_input}'. This shows how the chat interface works!"
+                metadata = {"demo_mode": True, "error": str(e)}
+            
+            st.write(full_response)
         
-        # Add assistant response to chat history
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": final_response,
-            "agent_name": selected_agent
-        })
-        
-        # Update stats
-        st.session_state.conversation_stats["agents_used"].add(selected_agent)
-        st.session_state.conversation_stats["total_messages"] += 1
-
-# Status indicators
-st.subheader("🔌 System Status")
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    # Check if environment variables are set
-    anthropic_status = "✅ Ready" if os.getenv("ANTHROPIC_API_KEY") else "❌ Not Configured"
-    st.metric("Anthropic API", anthropic_status)
-
-with col2:
-    aws_status = "✅ Ready" if (os.getenv("AWS_ACCESS_KEY_ID") and os.getenv("AWS_SECRET_ACCESS_KEY")) else "❌ Not Configured"
-    st.metric("AWS Bedrock", aws_status)
-
-with col3:
-    neon_status = "✅ Ready" if os.getenv("NEONPANEL_API_KEY") else "❌ Not Configured"
-    st.metric("NeonPanel API", neon_status)
-
-# Help section
-with st.expander("ℹ️ Help & Configuration"):
-    st.markdown("""
-    ### Getting Started
+        # Show metadata if enabled
+        if show_metadata:
+            with st.expander("🔍 Response Metadata"):
+                st.json(metadata)
     
-    1. **Configure API Keys**: Edit the `.env` file to add your API keys:
-       ```
-       ANTHROPIC_API_KEY=your_key_here
-       AWS_ACCESS_KEY_ID=your_key_here
-       AWS_SECRET_ACCESS_KEY=your_secret_here
-       NEONPANEL_API_KEY=your_key_here
-       ```
+    # Add assistant response to chat history
+    st.session_state.demo_messages.append({
+        "role": "assistant",
+        "content": full_response,
+        "agent_used": metadata.get("agent_used", "Demo Agent"),
+        "agent_type": agent_type,
+        "metadata": metadata,
+        "timestamp": datetime.now().isoformat()
+    })
     
-    2. **Agent Types**:
-       - **Auto-Select**: Automatically chooses the best agent based on your query
-       - **Anthropic Claude**: General-purpose conversational AI
-       - **AWS Bedrock**: Technical assistance and AWS services
-       - **NeonPanel Assistant**: Server management and NeonPanel operations
+    # Auto-scroll to bottom (rerun to update the display)
+    st.rerun()
+
+# Demo suggestions
+if not st.session_state.demo_messages:
+    st.subheader("💡 Try These Demo Messages")
+    col1, col2, col3 = st.columns(3)
     
-    3. **Features**:
-       - **Streaming**: See responses being typed in real-time
-       - **Context Awareness**: Agents remember conversation history
-       - **Export**: Save conversations as JSON or text files
+    with col1:
+        if st.button("🔧 Ask about databases", key="demo1"):
+            st.session_state.temp_message = "How do I optimize my PostgreSQL database performance?"
+            st.rerun()
     
-    ### Next Steps
-    To enable full functionality:
-    1. Add your API keys to the `.env` file
-    2. Configure your NeonPanel MCP server connection
-    3. Restart the application
-    """)
+    with col2:
+        if st.button("🤖 General AI question", key="demo2"):
+            st.session_state.temp_message = "Explain machine learning in simple terms"
+            st.rerun()
+    
+    with col3:
+        if st.button("⚡ Enterprise question", key="demo3"):
+            st.session_state.temp_message = "What are AWS best practices for scaling applications?"
+            st.rerun()
+
+# Handle demo button clicks
+if hasattr(st.session_state, 'temp_message'):
+    # Simulate user input
+    user_input = st.session_state.temp_message
+    del st.session_state.temp_message
+    
+    # Process the message (same logic as above)
+    st.session_state.demo_messages.append({
+        "role": "user", 
+        "content": user_input,
+        "timestamp": datetime.now().isoformat()
+    })
+    
+    try:
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        response, metadata = loop.run_until_complete(
+            st.session_state.demo_orchestrator.process_message(user_input, agent_type)
+        )
+        loop.close()
+    except Exception:
+        response = f"Demo response for: '{user_input}'"
+        metadata = {"demo_mode": True}
+    
+    st.session_state.demo_messages.append({
+        "role": "assistant",
+        "content": response,
+        "agent_used": metadata.get("agent_used", "Demo Agent"),
+        "metadata": metadata,
+        "timestamp": datetime.now().isoformat()
+    })
+    
+    st.rerun()
+
+# Footer
+st.markdown("---")
+st.markdown("""
+<div style='text-align: center; color: #666;'>
+    <small>🚀 Agent Squad MVP Demo | Enhanced Chat Interface</small>
+</div>
+""", unsafe_allow_html=True)

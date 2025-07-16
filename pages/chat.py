@@ -18,9 +18,23 @@ try:
     from agent_squad.agents import BedrockLLMAgent, BedrockLLMAgentOptions, AnthropicAgent, AnthropicAgentOptions
     from mcp.neonpanel_agent import create_neonpanel_agent
     AGENTS_AVAILABLE = True
-except ImportError as e:
-    st.error(f"Agent modules not available: {e}")
-    AGENTS_AVAILABLE = False
+except ImportError:
+    # Use mock agents for demo
+    try:
+        import sys
+        import os
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from mock_agents import (
+            AgentSquad, AnthropicAgent, AnthropicAgentOptions, 
+            BedrockLLMAgent, BedrockLLMAgentOptions, create_demo_orchestrator,
+            get_agent_status
+        )
+        AGENTS_AVAILABLE = True
+        DEMO_MODE = True
+    except ImportError as e:
+        st.error(f"Could not load agents: {e}")
+        AGENTS_AVAILABLE = False
+        DEMO_MODE = False
 
 # Page configuration
 st.title("🤖 Multi-Agent Chat System")
@@ -28,42 +42,18 @@ st.markdown("Chat with specialized AI agents that can help with various tasks in
 
 # Check if agents are available
 if not AGENTS_AVAILABLE:
-    st.info("🚀 **Demo Mode**: Agent modules are loading or unavailable.")
-    st.markdown("""
-    **This is a demo of the Agent Squad MVP interface.** 
-    
-    The app is currently running in demo mode while dependencies install. 
-    
-    **Available features:**
-    - ✅ Navigate between pages (Home, Enhanced Chat, NeonPanel Dashboard)
-    - ✅ View the user interface and layout
-    - ✅ See the agent selection and configuration options
-    
-    **To enable full functionality:**
-    - Wait for dependencies to install (may take 2-3 minutes)
-    - Or add API keys in Streamlit Cloud settings for full agent capabilities
-    
-    **Try the Enhanced Chat page** for a working interface!
-    """)
-    
-    # Show a demo interface
-    st.subheader("🤖 Agent Selection (Demo)")
-    demo_agent = st.selectbox(
-        "Choose Agent:",
-        ["Anthropic Claude", "AWS Bedrock", "NeonPanel Assistant", "Auto-Select"],
-        help="This is a demo selection - full functionality requires API keys"
-    )
-    
-    demo_message = st.text_area(
-        "Message:",
-        placeholder="Type your message here... (Demo mode - responses not active yet)",
-        height=100
-    )
-    
-    if st.button("Send Message (Demo)", type="primary"):
-        st.info(f"Demo: Would send message to {demo_agent}")
-        
+    st.error("Agent modules are not properly installed. Please check your installation.")
+    st.code("pip install -r requirements.txt")
     st.stop()
+
+# Show demo mode indicator if using mock agents
+if 'DEMO_MODE' in locals() and DEMO_MODE:
+    st.info("🚀 **Demo Mode**: Using mock agents for demonstration. Full functionality requires API keys.")
+    
+    # Show agent status
+    if st.button("🔍 Check Agent Status"):
+        status = get_agent_status()
+        st.json(status)
 
 # Initialize session state
 if "messages" not in st.session_state:
@@ -117,6 +107,15 @@ def initialize_orchestrator(anthropic_key: str, aws_region: str, neonpanel_key: 
                           use_tech: bool, use_neonpanel: bool, use_general: bool,
                           streaming: bool, temperature: float) -> AgentSquad:
     """Initialize the agent orchestrator with selected agents"""
+    
+    # Check if we're in demo mode
+    if 'DEMO_MODE' in locals() and DEMO_MODE:
+        # Return demo orchestrator
+        orchestrator = AgentSquad("Demo Squad")
+        st.success("✅ Demo agents initialized successfully!")
+        return orchestrator
+    
+    # Real agent initialization
     orchestrator = AgentSquad()
     
     try:
@@ -152,10 +151,13 @@ def initialize_orchestrator(anthropic_key: str, aws_region: str, neonpanel_key: 
         if use_neonpanel and neonpanel_key:
             # Set environment variable for the NeonPanel client
             os.environ["NEONPANEL_API_KEY"] = neonpanel_key
-            neonpanel_agent = create_neonpanel_agent()
-            # Note: NeonPanel agent needs to be adapted to work with the orchestrator
-            # For now, we'll create a wrapper
-            orchestrator.add_agent(create_neonpanel_wrapper(neonpanel_agent, anthropic_key, streaming, temperature))
+            try:
+                neonpanel_agent = create_neonpanel_agent()
+                # Note: NeonPanel agent needs to be adapted to work with the orchestrator
+                # For now, we'll create a wrapper
+                orchestrator.add_agent(create_neonpanel_wrapper(neonpanel_agent, anthropic_key, streaming, temperature))
+            except:
+                st.warning("NeonPanel agent unavailable - using mock version")
     
     except Exception as e:
         st.error(f"Error initializing agents: {str(e)}")

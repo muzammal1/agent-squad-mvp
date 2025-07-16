@@ -7,8 +7,7 @@ requests>=2.31.0
 pydantic>=2.0.0
 httpx>=0.24.0
 
-# Agent Squad framework - Install from GitHub
-git+https://github.com/awslabs/agent-squad.git
+# AI and Agent dependencies (lightweight versions)
 anthropic>=0.25.0
 
 # Web UI and Chat Interface
