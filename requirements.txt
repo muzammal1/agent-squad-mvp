@@ -7,9 +7,9 @@ requests>=2.31.0
 pydantic>=2.0.0
 httpx>=0.24.0
 
-# Agent Squad framework (try pip install manually if needed)
-# agent-squad[aws]
-# agent-squad[anthropic]
+# Agent Squad framework - Install from GitHub
+git+https://github.com/awslabs/agent-squad.git
+anthropic>=0.25.0
 
 # Web UI and Chat Interface
 chainlit>=1.0.0
